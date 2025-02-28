@@ -1,0 +1,12 @@
+.vscode
+.venv
+.env_*
+.env
+.cursorules
+venv
+__pycache__
+build/
+reports/
+.build
+notes.txt
+deploy_log.md
