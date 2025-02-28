@@ -52,12 +52,18 @@ event RemoveDistributor:
     timestamp: uint256
 
 event SentRewardToken:
-    reward_receiver: address
+    single_reward_receiver: address
     reward_token: address
     amount: uint256
     epoch: uint256
     timestamp: uint256
 
+event SentRewardTokenWithReceiver:
+    reward_receiver: address
+    reward_token: address
+    amount: uint256
+    epoch: uint256
+    timestamp: uint256
 
 @deploy
 def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
@@ -122,6 +128,7 @@ def deposit_reward_token_with_receiver(_reward_receiver: address, _reward_token:
     """
     @notice Deposit reward token
     @param _reward_receiver Reward receiver address
+    @dev reward receiver must be a gauge, as access is set as depositor in the gauge, this is not to be gated here
     @param _reward_token Reward token address
     @param _amount Amount of reward token to deposit
     @param _epoch Epoch to deposit reward token
@@ -133,7 +140,7 @@ def deposit_reward_token_with_receiver(_reward_receiver: address, _reward_token:
 
     extcall Gauge(_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
 
-    log SentRewardToken(_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)  
+    log SentRewardTokenWithReceiver(_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)  
 
 @view
 @external
@@ -146,6 +153,7 @@ def add_distributor(_new_distributor: address):
     # assert msg.sender in [Gauge(self.reward_receiver).manager(), PARAMETER_ADMIN, OWNERSHIP_ADMIN]
 
     assert msg.sender in self.guards, 'only guards can call this function'
+    assert _new_distributor not in self.distributors, 'prevent to add the same distributor twice'
 
     self.distributors.append(_new_distributor)
 
@@ -156,6 +164,7 @@ def remove_distributor(_rm_distributor: address):
     """
     @notice Remove an active campaign address from the list
     @param _rm_distributor The address of the distributor to remove
+    @todo: now a distributor not in the list also creats the RemoveDistributor event
     """
     assert msg.sender in self.guards, 'only guards can call this function'
     
@@ -175,6 +184,7 @@ def add_guard(_new_guard: address):
     # assert msg.sender in [Gauge(self.reward_receiver).manager(), PARAMETER_ADMIN, OWNERSHIP_ADMIN]
 
     assert msg.sender in self.guards, 'only guards can call this function'
+    assert _new_guard not in self.guards, 'prevent to add the same guard twice'
 
     self.guards.append(_new_guard)
 
