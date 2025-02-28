@@ -13,10 +13,11 @@ interface Gauge:
     def reward_data(_token: address) -> (address, uint256): view
     def manager() -> address: view
 
+# hardcoded addresses for Taiko
 # L2 OWNERSHIP ADMIN 
-OWNERSHIP_ADMIN: constant(address) = 0x452030a5D962d37D97A9D65487663cD5fd9C2B32
+OWNERSHIP_ADMIN: constant(address) = 0x6c9578402A3ace046A12839f45F84Aa5448E9c30
 # L2 PARAMETER_ADMIN
-PARAMETER_ADMIN: constant(address) = 0x5ccbB27FB594c5cF6aC0670bbcb360c0072F6839
+PARAMETER_ADMIN: constant(address) = 0xEC5AFc9590964f2fA0FeED54f0fBB2A34480908D
 
 FIRST_GUARD: constant(address) = 0x9f499A0B7c14393502207877B17E3748beaCd70B
 
@@ -69,9 +70,10 @@ event SentRewardTokenWithReceiver:
 def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
     """
     @notice Contract constructor
-    @param _reward_receivers Reward receivers addresses
+    @param _reward_receivers Reward receivers addresses, currently not used anywhere!
     @param _guards Guards addresses
     @param _distributors Distributors addresses
+    @dev _reward_receivers are not used anywhere, as the sending reward is gated by the depositor address in the gauge (this contract)
     """
     self.reward_receivers = _reward_receivers
     self.guards = _guards
@@ -164,7 +166,7 @@ def remove_distributor(_rm_distributor: address):
     """
     @notice Remove an active campaign address from the list
     @param _rm_distributor The address of the distributor to remove
-    @todo: now a distributor not in the list also creats the RemoveDistributor event
+    @dev todo: now a distributor not in the list also creats the RemoveDistributor event
     """
     assert msg.sender in self.guards, 'only guards can call this function'
     
