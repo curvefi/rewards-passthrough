@@ -67,7 +67,7 @@ event SentRewardTokenWithReceiver:
     timestamp: uint256
 
 @deploy
-def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
+def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address, 10], _distributors: DynArray[address, 10]):
     """
     @notice Contract constructor
     @param _reward_receivers Reward receivers addresses, currently not used anywhere!
