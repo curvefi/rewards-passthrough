@@ -28,12 +28,23 @@ non_removable_guards: public(DynArray[address, 2])  # L2 fixed guards
 distributors: public(DynArray[address, 10])  # L2 distributors
 reward_receivers: public(DynArray[address, 10])  # L2 reward receivers
 single_reward_receiver: public(address)
+single_reward_token: public(address)
+
+name: public(String[128])
 
 event PassthroughDeployed:
     timestamp: uint256
 
 event SetSingleRewardReceiver:
     single_reward_receiver: address
+    timestamp: uint256
+
+event SetSingleRewardToken:
+    single_reward_token: address
+    timestamp: uint256
+
+event SetName:
+    name: String[128]
     timestamp: uint256
 
 event AddGuard:
@@ -97,18 +108,40 @@ def deposit_reward_token(_reward_token: address, _amount: uint256, _epoch: uint2
     @notice Deposit reward token
     @param _reward_token Reward token address
     @param _amount Amount of reward token to deposit
-    @param _epoch Epoch to deposit reward token
+    @param _epoch Epoch to deposit reward token, default is 1 week in seconds, min. 3 days in L2 gauges
     @dev This function is used to deposit reward token to the single reward receiver
     @dev To use this function, set the single reward receiver first (gauge address)
     """
     assert msg.sender in self.distributors or msg.sender in self.guards, 'only distributors or guards can call this function'
-    
+    assert self.single_reward_receiver != ZERO_ADDRESS, 'single reward receiver not set'
+
     assert extcall IERC20(_reward_token).transferFrom(msg.sender, self, _amount)
     assert extcall IERC20(_reward_token).approve(self.single_reward_receiver, _amount)
 
     extcall Gauge(self.single_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
 
     log SentRewardToken(self.single_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)  
+
+
+@external
+def deposit_reward(_amount: uint256, _epoch: uint256 = WEEK):
+    """
+    @notice Deposit reward token
+    @param _amount Amount of reward token to deposit
+    @param _epoch Epoch to deposit reward token, default is 1 week in seconds, min, 3 days in L2 gauges
+    @dev This function is used to deposit reward token to the single reward receiver with a fixed reward token
+    @dev To use this function, set the single reward receiver first (gauge address)
+    """
+    assert msg.sender in self.distributors or msg.sender in self.guards, 'only distributors or guards can call this function'
+    assert self.single_reward_token != ZERO_ADDRESS, 'single reward token not set'
+    assert self.single_reward_receiver != ZERO_ADDRESS, 'single reward receiver not set'
+
+    assert extcall IERC20(self.single_reward_token).transferFrom(msg.sender, self, _amount)
+    assert extcall IERC20(self.single_reward_token).approve(self.single_reward_receiver, _amount)
+
+    extcall Gauge(self.single_reward_receiver).deposit_reward_token(self.single_reward_token, _amount, _epoch)
+
+    log SentReward(self.single_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)
 
 
 @external
@@ -120,9 +153,22 @@ def set_single_reward_receiver(_single_reward_receiver: address):
     @dev function the same interface as in a gauge
     """
     assert msg.sender in self.guards, 'only guards can call this function'
-    self.single_reward_receiver = _single_reward_receiver   
+    self.single_reward_receiver = _single_reward_receiver
 
     log SetSingleRewardReceiver(_single_reward_receiver, block.timestamp)
+
+@external
+def set_single_reward_token(_single_reward_token: address):
+    """
+    @notice Set the single reward token
+    @param _single_reward_token The address of the single reward token
+    @dev This can be used to set a single reward token to have the deposit_reward()
+    @dev function the same interface as in a gauge
+    """
+    assert msg.sender in self.guards, 'only guards can call this function'
+    self.single_reward_token = _single_reward_token
+
+    log SetSingleRewardToken(_single_reward_token, block.timestamp)
 
 
 @external
@@ -211,6 +257,19 @@ def remove_guard(_rm_guard: address):
             break
 
     log RemoveGuard(_rm_guard, block.timestamp)
+
+
+@external
+def set_name(name: String[128]):
+    """
+    @notice Set the name of the passthrough contract
+    @param name The name of the passthrough contract
+    """
+    assert msg.sender in self.guards, 'only guards can call this function'
+    self.name = name
+
+    log SetName(name, block.timestamp)
+
 
 @external
 @view
