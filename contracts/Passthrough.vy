@@ -10,14 +10,10 @@ from ethereum.ercs import IERC20
 
 interface Gauge:
     def deposit_reward_token(_reward_token: address, _amount: uint256, _epoch: uint256): nonpayable
-    def reward_data(_token: address) -> (address, uint256): view
+    def reward_data(_token: address) -> (address, uint256, uint256, uint256): view
     def manager() -> address: view
 
-# hardcoded addresses for Taiko
-# L2 OWNERSHIP ADMIN 
-OWNERSHIP_ADMIN: constant(address) = 0x6c9578402A3ace046A12839f45F84Aa5448E9c30
-# L2 PARAMETER_ADMIN
-PARAMETER_ADMIN: constant(address) = 0xEC5AFc9590964f2fA0FeED54f0fBB2A34480908D
+
 
 FIRST_GUARD: constant(address) = 0x9f499A0B7c14393502207877B17E3748beaCd70B
 
@@ -29,6 +25,9 @@ distributors: public(DynArray[address, 10])  # L2 distributors
 reward_receivers: public(DynArray[address, 10])  # L2 reward receivers
 single_reward_receiver: public(address)
 single_reward_token: public(address)
+
+OWNERSHIP_ADMIN: public(immutable(address))
+PARAMETER_ADMIN: public(immutable(address))
 
 name: public(String[128])
 
@@ -70,6 +69,13 @@ event SentRewardToken:
     epoch: uint256
     timestamp: uint256
 
+event SentReward:
+    single_reward_receiver: address
+    reward_token: address
+    amount: uint256
+    epoch: uint256
+    timestamp: uint256
+
 event SentRewardTokenWithReceiver:
     reward_receiver: address
     reward_token: address
@@ -77,8 +83,15 @@ event SentRewardTokenWithReceiver:
     epoch: uint256
     timestamp: uint256
 
+event RewardData:
+    distributor: address
+    period_finish: uint256
+    rate: uint256
+    last_update: uint256
+    timestamp: uint256
+
 @deploy
-def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
+def __init__(_ownership_admin: address, _parameter_admin: address, _reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
     """
     @notice Contract constructor
     @param _reward_receivers Reward receivers addresses, currently not used anywhere!
@@ -89,9 +102,11 @@ def __init__(_reward_receivers: DynArray[address, 10], _guards: DynArray[address
     self.reward_receivers = _reward_receivers
     self.guards = _guards
     # add default guards
-    self.guards.append(FIRST_GUARD)
+    OWNERSHIP_ADMIN = _ownership_admin
+    PARAMETER_ADMIN = _parameter_admin
     self.guards.append(OWNERSHIP_ADMIN)
     self.guards.append(PARAMETER_ADMIN)
+    self.guards.append(FIRST_GUARD)
     
     self.non_removable_guards.append(OWNERSHIP_ADMIN)
     self.non_removable_guards.append(PARAMETER_ADMIN)
@@ -113,7 +128,7 @@ def deposit_reward_token(_reward_token: address, _amount: uint256, _epoch: uint2
     @dev To use this function, set the single reward receiver first (gauge address)
     """
     assert msg.sender in self.distributors or msg.sender in self.guards, 'only distributors or guards can call this function'
-    assert self.single_reward_receiver != ZERO_ADDRESS, 'single reward receiver not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
 
     assert extcall IERC20(_reward_token).transferFrom(msg.sender, self, _amount)
     assert extcall IERC20(_reward_token).approve(self.single_reward_receiver, _amount)
@@ -133,15 +148,15 @@ def deposit_reward(_amount: uint256, _epoch: uint256 = WEEK):
     @dev To use this function, set the single reward receiver first (gauge address)
     """
     assert msg.sender in self.distributors or msg.sender in self.guards, 'only distributors or guards can call this function'
-    assert self.single_reward_token != ZERO_ADDRESS, 'single reward token not set'
-    assert self.single_reward_receiver != ZERO_ADDRESS, 'single reward receiver not set'
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
 
     assert extcall IERC20(self.single_reward_token).transferFrom(msg.sender, self, _amount)
     assert extcall IERC20(self.single_reward_token).approve(self.single_reward_receiver, _amount)
 
     extcall Gauge(self.single_reward_receiver).deposit_reward_token(self.single_reward_token, _amount, _epoch)
 
-    log SentReward(self.single_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)
+    log SentReward(self.single_reward_receiver, self.single_reward_token, _amount, _epoch, block.timestamp)
 
 
 @external
@@ -192,8 +207,18 @@ def deposit_reward_token_with_receiver(_reward_receiver: address, _reward_token:
 
 @view
 @external
-def reward_data(_reward_receiver: address, _token: address) -> (address, uint256):
-    return staticcall Gauge(_reward_receiver).reward_data(_token)
+def reward_data(_reward_receiver: address, _token: address) -> (address, uint256, uint256, uint256):
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(_reward_receiver).reward_data(_token)
+    
+    return (distributor, period_finish, rate, last_update)
+
+    # log RewardData(distributor, period_finish, rate, last_update, block.timestamp)
 
 
 @external

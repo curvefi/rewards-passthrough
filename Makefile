@@ -23,6 +23,21 @@ deploy_info_taiko:
 deploy_taiko:
 	ape run scripts/deploy_manager.py deploy --network taiko:mainnet:node
 
+deploy_many_sonic:
+	ape run scripts/deploy_manager.py deploy-many --network sonic:mainnet:node
+
+deploy_optimism:
+	ape run scripts/deploy_manager.py deploy --network optimism:mainnet:node
+
+deploy_many_optimism:
+	ape run scripts/deploy_manager.py deploy-many --network optimism:mainnet:node
+
+deploy_info_optimism:
+	ape run scripts/deploy_manager.py info --network optimism:mainnet:node
+
+deploy_testnet:
+	ape run scripts/deploy_manager.py deploy-many --network ethereum:local:test
+
 import_pvk:
 	ape accounts import arbideploy
 

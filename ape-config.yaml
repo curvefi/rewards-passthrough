@@ -1,0 +1,12 @@
+networks:
+  custom:
+     - name: mainnet                   # Required
+       chain_id: 146                   # Required
+       ecosystem: sonic            # The ecosystem name, can either be new or an existing
+       base_ecosystem_plugin: arbitrum  # The ecosystem base-class, defaults to the default ecosystem
+       default_provider: node
+
+node:
+  sonic:
+    mainnet:
+      uri: https://rpc.soniclabs.com
