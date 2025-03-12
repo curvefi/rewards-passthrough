@@ -66,6 +66,10 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
         account.set_autosign(True)
    
     max_fee, blockexplorer = setup(ecosystem, network)
+
+    # compiler_settings = {'settings': CompilerSettings(evm_version='shanghai', optimize=OptimizationLevel.CODESIZE)}
+
+    
     guards = ["0x84bC1fC6204b959470BF8A00d871ff8988a3914A", "0xf7Bd34Dd44B92fB2f9C3D2e31aAAd06570a853A6"]
     
     new_gauge_manager = "0xf7Bd34Dd44B92fB2f9C3D2e31aAAd06570a853A6"
@@ -96,8 +100,8 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
         gauges = [GAUGE_LEND_CRV_LONG, GAUGE_LEND_OP_LONG, GAUGE_LEND_WBTC_LONG, GAUGE_LEND_WETH_LONG, GAUGE_LEND_WSTETH_LONG, GAUGE_TRICRYPTO_CRVUSD, GAUGE_TRICRV, GAUGE_WSTETH_ETH, GAUGE_SCRVUSD]
         names = ["LLama Lend CRV Long", "LLama Lend OP Long", "LLama Lend WBTC Long", "LLama Lend WETH Long", "LLama Lend wstETH Long", "crvUSD/WBTC/WETH (Tricrypto-crvUSD)", "crvUSD/CRV/OP (TriCRV-Optimism)", "wstETH/ETH", "crvUSD/scrvUSD"]
 
-        gauges = [GAUGE_SCRVUSD]
-        names = ["crvUSD/scrvUSD"]
+        #gauges = [GAUGE_SCRVUSD]
+        #names = ["crvUSD/scrvUSD"]
 
     if chainname == 'taiko':
 
@@ -130,7 +134,7 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
             names.pop(0)
 
     i = 0
-    sleep_time = 2
+    sleep_time = 10
 
     for reward_receiver in gauges:
         print(f"Deploying {names[i]}")

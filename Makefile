@@ -38,6 +38,9 @@ deploy_info_optimism:
 deploy_testnet:
 	ape run scripts/deploy_manager.py deploy-many --network ethereum:local:test
 
+filter_log:
+	ag --nonumbers "(Name|Link|Contract)" deploy_passthrough_contracts_sonic.log
+
 import_pvk:
 	ape accounts import arbideploy
 

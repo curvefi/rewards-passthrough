@@ -4,9 +4,11 @@
 .env
 .cursorules
 venv
+.pyc
 __pycache__
 build/
 reports/
 .build
 notes.txt
 deploy_log.md
+ape-config.yaml

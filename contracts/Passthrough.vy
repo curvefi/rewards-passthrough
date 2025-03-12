@@ -1,10 +1,14 @@
-#pragma version ^0.4.0
+#pragma version ^0.4.1
 """
 @title Passthrough for L2
-@author anon contributor to curve
+@author anon contributor to curve.fi
 @license MIT
 @notice passthrough contract who can deposit token rewards to allowed reward_receivers (gauges)
+@custom:version 0.0.2
+@custom:security security@curve.fi
 """
+
+version: public(constant(String[8])) = "0.0.2"
 
 from ethereum.ercs import IERC20
 
@@ -13,7 +17,10 @@ interface Gauge:
     def reward_data(_token: address) -> (address, uint256, uint256, uint256): view
     def manager() -> address: view
 
-
+interface LegacyGauge:
+    def deposit_reward_token(_reward_token: address, _amount: uint256): nonpayable
+    def manager() -> address: view
+    def reward_data(_token: address) -> (address, uint256, uint256, uint256): view
 
 FIRST_GUARD: constant(address) = 0x9f499A0B7c14393502207877B17E3748beaCd70B
 
@@ -131,9 +138,14 @@ def deposit_reward_token(_reward_token: address, _amount: uint256, _epoch: uint2
     assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
 
     assert extcall IERC20(_reward_token).transferFrom(msg.sender, self, _amount)
-    assert extcall IERC20(_reward_token).approve(self.single_reward_receiver, _amount)
+    assert extcall IERC20(_reward_token).approve(self.single_reward_receiver, _amount, default_return_value=True)
 
-    extcall Gauge(self.single_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
+    # legacy gauges have no epoch parameter 
+    # new deposit_reward_token has epoch parameter default to WEEK
+    if _epoch == WEEK:
+        extcall LegacyGauge(self.single_reward_receiver).deposit_reward_token(_reward_token, _amount)
+    else:
+        extcall Gauge(self.single_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
 
     log SentRewardToken(self.single_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)  
 
@@ -152,9 +164,15 @@ def deposit_reward(_amount: uint256, _epoch: uint256 = WEEK):
     assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
 
     assert extcall IERC20(self.single_reward_token).transferFrom(msg.sender, self, _amount)
-    assert extcall IERC20(self.single_reward_token).approve(self.single_reward_receiver, _amount)
+    assert extcall IERC20(self.single_reward_token).approve(self.single_reward_receiver, _amount, default_return_value=True)
 
-    extcall Gauge(self.single_reward_receiver).deposit_reward_token(self.single_reward_token, _amount, _epoch)
+    # legacy gauges have no epoch parameter 
+    # new deposit_reward_token has epoch parameter default to WEEK
+    if _epoch == WEEK:
+        extcall LegacyGauge(self.single_reward_receiver).deposit_reward_token(self.single_reward_token, _amount)
+    else:
+        extcall Gauge(self.single_reward_receiver).deposit_reward_token(self.single_reward_token, _amount, _epoch)
+
 
     log SentReward(self.single_reward_receiver, self.single_reward_token, _amount, _epoch, block.timestamp)
 
@@ -199,26 +217,16 @@ def deposit_reward_token_with_receiver(_reward_receiver: address, _reward_token:
     assert msg.sender in self.distributors or msg.sender in self.guards, 'only distributors or guards can call this function'
     
     assert extcall IERC20(_reward_token).transferFrom(msg.sender, self, _amount)
-    assert extcall IERC20(_reward_token).approve(_reward_receiver, _amount)
+    assert extcall IERC20(_reward_token).approve(_reward_receiver, _amount, default_return_value=True)
 
-    extcall Gauge(_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
+    # legacy gauges have no epoch parameter 
+    # new deposit_reward_token has epoch parameter default to WEEK
+    if _epoch == WEEK:
+        extcall LegacyGauge(_reward_receiver).deposit_reward_token(_reward_token, _amount)
+    else:
+        extcall Gauge(_reward_receiver).deposit_reward_token(_reward_token, _amount, _epoch)
 
     log SentRewardTokenWithReceiver(_reward_receiver, _reward_token, _amount, _epoch, block.timestamp)  
-
-@view
-@external
-def reward_data(_reward_receiver: address, _token: address) -> (address, uint256, uint256, uint256):
-
-    distributor: address = empty(address)
-    period_finish: uint256 = 0
-    rate: uint256 = 0
-    last_update: uint256 = 0
-    
-    (distributor, period_finish, rate, last_update) = staticcall Gauge(_reward_receiver).reward_data(_token)
-    
-    return (distributor, period_finish, rate, last_update)
-
-    # log RewardData(distributor, period_finish, rate, last_update, block.timestamp)
 
 
 @external
@@ -294,6 +302,44 @@ def set_name(name: String[128]):
     self.name = name
 
     log SetName(name, block.timestamp)
+
+
+@external
+@view
+def reward_data(_reward_receiver: address, _token: address) -> (address, uint256, uint256, uint256):
+    """
+    @notice Get the reward data
+    @param _reward_receiver The address of the reward receiver
+    @param _token The address of the reward token
+    @return (address, uint256, uint256, uint256) The reward data
+    """
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(_reward_receiver).reward_data(_token)
+    
+    return (distributor, period_finish, rate, last_update)
+
+@external
+@view
+def get_rate() -> uint256:
+    """
+    @notice Get the reward rate in seconds
+    @return uint256 The reward rate in seconds
+    """
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return rate
 
 
 @external

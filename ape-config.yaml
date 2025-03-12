@@ -10,3 +10,6 @@ node:
   sonic:
     mainnet:
       uri: https://rpc.soniclabs.com
+
+vyper:
+  version: 0.4.1
