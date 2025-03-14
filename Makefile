@@ -17,6 +17,19 @@ deploy_arbitrum_sepolia:
 deploy_arbitrum:
 	ape run scripts/deploy_manager.py deploy --network arbitrum:mainnet:node
 
+deploy_arbitrum_sepolia:
+	ape run scripts/deploy_manager.py deploy --network arbitrum:sepolia:node
+
+deploy_many_arbitrum:
+	ape run scripts/deploy_manager.py deploy-many --network arbitrum:mainnet:node 
+	
+deploy_many_arbitrum_dry_run:
+	ape run scripts/deploy_manager.py deploy-many --network arbitrum:mainnet:node --dry-run
+
+	
+deploy_many_arbitrum_sepolia_dry_run:
+	ape run scripts/deploy_manager.py deploy-many --network arbitrum:sepolia:node --dry-run
+
 deploy_info_taiko:
 	ape run scripts/deploy_manager.py info --network taiko:mainnet:node
 

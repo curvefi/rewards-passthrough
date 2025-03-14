@@ -4,11 +4,13 @@
 @author anon contributor to curve.fi
 @license MIT
 @notice passthrough contract who can deposit token rewards to allowed reward_receivers (gauges)
-@custom:version 0.0.2
+@custom:version 0.0.3
 @custom:security security@curve.fi
 """
 
-version: public(constant(String[8])) = "0.0.2"
+import PassthroughHelpers as ph
+
+version: public(constant(String[8])) = "0.0.3"
 
 from ethereum.ercs import IERC20
 
@@ -27,14 +29,15 @@ FIRST_GUARD: constant(address) = 0x9f499A0B7c14393502207877B17E3748beaCd70B
 WEEK: public(constant(uint256)) = 7 * 24 * 60 * 60  # 1 week in seconds
 
 guards: public(DynArray[address, 10])  # L2 guards
-non_removable_guards: public(DynArray[address, 2])  # L2 fixed guards
+non_removable_guards: address[3]  # L2 fixed guards
 distributors: public(DynArray[address, 10])  # L2 distributors
 reward_receivers: public(DynArray[address, 10])  # L2 reward receivers
 single_reward_receiver: public(address)
 single_reward_token: public(address)
 
-OWNERSHIP_ADMIN: public(immutable(address))
-PARAMETER_ADMIN: public(immutable(address))
+OWNERSHIP_AGENT: public(immutable(address))
+PARAMETER_AGENT: public(immutable(address))
+EMERGENCY_AGENT: public(immutable(address))
 
 name: public(String[128])
 
@@ -98,29 +101,33 @@ event RewardData:
     timestamp: uint256
 
 @deploy
-def __init__(_ownership_admin: address, _parameter_admin: address, _reward_receivers: DynArray[address, 10], _guards: DynArray[address, 7], _distributors: DynArray[address, 10]):
+def __init__(_non_removable_guards: address[3], _reward_receivers: DynArray[address, 10], _guards: DynArray[address, 6], _distributors: DynArray[address, 10]):
     """
     @notice Contract constructor
+    @param _non_removable_guards Non-removable guards addresses
     @param _reward_receivers Reward receivers addresses, currently not used anywhere!
     @param _guards Guards addresses
     @param _distributors Distributors addresses
     @dev _reward_receivers are not used anywhere, as the sending reward is gated by the depositor address in the gauge (this contract)
     """
+    
     self.reward_receivers = _reward_receivers
     self.guards = _guards
+    self.distributors = _distributors
+    self.non_removable_guards = _non_removable_guards
+    self.name = "Unnamed Passthrough - maybe not used"
+
     # add default guards
-    OWNERSHIP_ADMIN = _ownership_admin
-    PARAMETER_ADMIN = _parameter_admin
-    self.guards.append(OWNERSHIP_ADMIN)
-    self.guards.append(PARAMETER_ADMIN)
+    
+    OWNERSHIP_AGENT = _non_removable_guards[0]
+    PARAMETER_AGENT = _non_removable_guards[1]
+    EMERGENCY_AGENT = _non_removable_guards[2]
+
+    self.guards.append(OWNERSHIP_AGENT)
+    self.guards.append(PARAMETER_AGENT)
+    self.guards.append(EMERGENCY_AGENT)
     self.guards.append(FIRST_GUARD)
     
-    self.non_removable_guards.append(OWNERSHIP_ADMIN)
-    self.non_removable_guards.append(PARAMETER_ADMIN)
-
-    
-    self.distributors = _distributors
-
     log PassthroughDeployed(block.timestamp)
 
 
@@ -255,9 +262,8 @@ def remove_distributor(_rm_distributor: address):
             if i != last_idx:
                 self.distributors[i] = self.distributors[last_idx]
             self.distributors.pop()
+            log RemoveDistributor(_rm_distributor, block.timestamp)
             break
-
-    log RemoveDistributor(_rm_distributor, block.timestamp)
 
 
 @external
@@ -321,6 +327,104 @@ def reward_data(_reward_receiver: address, _token: address) -> (address, uint256
     (distributor, period_finish, rate, last_update) = staticcall Gauge(_reward_receiver).reward_data(_token)
     
     return (distributor, period_finish, rate, last_update)
+
+@external
+@view
+def reward_data_with_preset() -> (address, uint256, uint256, uint256):
+    """
+    @notice Get the reward data
+    @return (address, uint256, uint256, uint256) The reward data
+    @dev make internal call to the reward_data function
+    """
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return (distributor, period_finish, rate, last_update)
+
+
+@external
+@view
+def get_distributor() -> address:
+    """
+    @notice Get the distributor of the reward period
+    @return address The distributor of the reward period
+    """
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return distributor
+
+@external
+@view
+def get_period_finish() -> uint256:
+    """
+    @notice Get the end time of the reward period
+    @return uint256 The end time of the reward period
+    """
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return period_finish
+
+@external
+@view
+def is_period_active() -> bool:
+    """
+    @notice Get if the reward period is active
+    @return bool True if the reward period is active, false otherwise
+    """
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return period_finish > block.timestamp
+
+@external
+@view
+def get_last_update() -> uint256:
+    """
+    @notice Get the last update time of the reward period
+    @return uint256 The last update time of the reward period
+    """ 
+    assert self.single_reward_token != empty(address), 'single reward token not set'
+    assert self.single_reward_receiver != empty(address), 'single reward receiver not set'
+
+    distributor: address = empty(address)
+    period_finish: uint256 = 0
+    rate: uint256 = 0
+    last_update: uint256 = 0
+    
+    (distributor, period_finish, rate, last_update) = staticcall Gauge(self.single_reward_receiver).reward_data(self.single_reward_token)
+    
+    return last_update
+
 
 @external
 @view

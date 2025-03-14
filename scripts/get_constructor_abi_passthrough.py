@@ -9,6 +9,7 @@ def get_constructor_args(*args):
     Get encoded constructor arguments for Passthrough contract
     Args:
         *args: Variable length argument list containing:
+            - agents: list of agent addresses
             - rewards_tokens: list of reward token addresses
             - rewards_contracts: list of reward contract addresses
             - distributors: list of distributor addresses

@@ -9,8 +9,10 @@ from ape.cli import ConnectedProviderCommand, account_option
 from scripts.get_constructor_abi_passthrough import get_constructor_args
 
 # make soure to reload env variables on change
-OWNERSHIP_ADMIN = os.getenv('OWNERSHIP_ADMIN')
-PARAMETER_ADMIN = os.getenv('PARAMETER_ADMIN')
+OWNERSHIP_AGENT = os.getenv('OWNERSHIP_AGENT')
+PARAMETER_AGENT = os.getenv('PARAMETER_AGENT')
+EMERGENCY_AGENT = os.getenv('EMERGENCY_AGENT')
+GUARDS = os.getenv('GUARDS')
 
 @click.group()
 def cli():
@@ -43,39 +45,50 @@ def deploy(ecosystem, network, provider, account):
 
     reward_receivers = []
     distributors = []
-    guards = []
-    
-    guards = ["0x84bC1fC6204b959470BF8A00d871ff8988a3914A"]
+    agents = [OWNERSHIP_AGENT, PARAMETER_AGENT, EMERGENCY_AGENT]
 
+    guards = GUARDS.split(",")
+    
     click.echo(reward_receivers)
     click.echo(distributors)
     click.echo(guards)
+    click.echo(agents)
 
-    deploy = account.deploy(project.Passthrough, OWNERSHIP_ADMIN, PARAMETER_ADMIN, reward_receivers, guards, distributors, max_priority_fee="10 wei", max_fee=max_fee, gas_limit="400000")
-    get_constructor_args(OWNERSHIP_ADMIN, PARAMETER_ADMIN, reward_receivers, guards, distributors)
+    #deploy = account.deploy(project.Passthrough, max_priority_fee="10 wei", max_fee=max_fee, gas_limit="4000000")
+
+    deploy = account.deploy(project.Passthrough, agents, reward_receivers, guards, distributors, max_priority_fee="10 wei", max_fee=max_fee, gas_limit="400000")
+    get_constructor_args(agents, reward_receivers, guards, distributors)
 
 cli.add_command(deploy)
 
 
 @click.command(cls=ConnectedProviderCommand)
 @account_option()
+@click.option('--dry-run', is_flag=True, help='Run in dry-run mode without making actual deployments')
 def deploy_many(ecosystem, network, provider, account, dry_run=False):
     if dry_run:
         print("Dry run mode enabled. No deployments will be made.")
+        # Use a dummy account for dry runs
+        account = type('DummyAccount', (), {
+            'address': '0x0000000000000000000000000000000000000000',
+            'deploy': lambda *args, **kwargs: None,
+            'set_autosign': lambda x: None
+        })()
     else:
+        print(f"Using account: {account}")
         account.set_autosign(True)
    
     max_fee, blockexplorer = setup(ecosystem, network)
 
     # compiler_settings = {'settings': CompilerSettings(evm_version='shanghai', optimize=OptimizationLevel.CODESIZE)}
+    reward_receivers = []
+    distributors = []
+    guards = GUARDS.split(",")
+    agents = [OWNERSHIP_AGENT, PARAMETER_AGENT, EMERGENCY_AGENT]
 
-    
-    guards = ["0x84bC1fC6204b959470BF8A00d871ff8988a3914A", "0xf7Bd34Dd44B92fB2f9C3D2e31aAAd06570a853A6"]
-    
     new_gauge_manager = "0xf7Bd34Dd44B92fB2f9C3D2e31aAAd06570a853A6"
 
     print(f"Deploying {ecosystem.name} {network.name}")
-
 
     with open("contracts/abi/ChildLiquidityGauge.json", "r") as f:
         contract_abi = f.read()
@@ -83,6 +96,12 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
     REWARD_TOKEN = os.getenv('REWARD_TOKEN')
     chainname = ecosystem.name
 
+    if chainname == 'arbitrum':
+
+        gauges = os.getenv('GAUGE_LIST').split(",")
+        names = os.getenv('GAUGE_LIST_NAME').split(",")
+
+        
     if chainname == 'optimism':
 
         # Import lending gauges from env
@@ -139,8 +158,8 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
     for reward_receiver in gauges:
         print(f"Deploying {names[i]}")
         if not dry_run:
-            passthrough = account.deploy(project.Passthrough, OWNERSHIP_ADMIN, PARAMETER_ADMIN, [], guards, [], max_priority_fee="10 wei", max_fee=max_fee, gas_limit="400000")
-            get_constructor_args(OWNERSHIP_ADMIN, PARAMETER_ADMIN, [], guards, [])
+            passthrough = account.deploy(project.Passthrough, agents, [], guards, [], max_priority_fee="10 wei", max_fee=max_fee, gas_limit="400000")
+            get_constructor_args(agents, reward_receivers, guards, distributors)
             time.sleep(sleep_time)
             passthrough.set_name(names[i], sender=account)
         
@@ -181,8 +200,8 @@ def deploy_many(ecosystem, network, provider, account, dry_run=False):
             f.write("-" * 20 + "\n")
             f.write(f"Change this on gauge\n")
             f.write("-" * 20 + "\n")
-
-            f.write(f"{blockexplorer}/address/{reward_receiver}\n")
+    
+            f.write(f"{blockexplorer}/address/{reward_receiver}#writeContract#F20\n")
             f.write(f"Set reward distributor: set_reward_distributor('{REWARD_TOKEN}', '{passthrough_address}')\n")
             if manager != new_gauge_manager:
                 f.write(f"Set manager: set_manager('{new_gauge_manager}') <-- this is mima\n")

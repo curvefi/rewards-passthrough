@@ -56,3 +56,16 @@ The contract emits events for all significant actions:
 - Maximum of 10 distributors
 - Maximum of 10 reward receivers in the initial array (currently not used)
 - Reward receivers must be compatible gauge contracts
+
+# Changelog
+
+## Version 0.0.3
+
+* Now with L2 Emergency Agent
+* init changed to agent as fixed 3 list
+* named these L2 agents agents here too
+* added more helper function to get each reward_data as single value
+* added is_period_active() to see if rewards are still running
+* reward_data_with_preset() as reward_data if token and gauge is set
+* moved event call in remove_distributor, now only should create event if something is removed
+
