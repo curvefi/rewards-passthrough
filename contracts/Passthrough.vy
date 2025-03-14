@@ -8,7 +8,7 @@
 @custom:security security@curve.fi
 """
 
-import PassthroughHelpers as ph
+# import PassthroughHelpers as ph
 
 version: public(constant(String[8])) = "0.0.3"
 
