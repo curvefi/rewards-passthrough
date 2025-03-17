@@ -59,6 +59,10 @@ The contract emits events for all significant actions:
 
 # Changelog
 
+## Version 0.0.4
+
+* add name to for single_reward_token
+
 ## Version 0.0.3
 
 * Now with L2 Emergency Agent
@@ -68,4 +72,3 @@ The contract emits events for all significant actions:
 * added is_period_active() to see if rewards are still running
 * reward_data_with_preset() as reward_data if token and gauge is set
 * moved event call in remove_distributor, now only should create event if something is removed
-

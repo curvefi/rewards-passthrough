@@ -4,13 +4,11 @@
 @author anon contributor to curve.fi
 @license MIT
 @notice passthrough contract who can deposit token rewards to allowed reward_receivers (gauges)
-@custom:version 0.0.3
+@custom:version 0.0.4
 @custom:security security@curve.fi
 """
 
-# import PassthroughHelpers as ph
-
-version: public(constant(String[8])) = "0.0.3"
+version: public(constant(String[8])) = "0.0.4"
 
 from ethereum.ercs import IERC20
 
@@ -34,6 +32,7 @@ distributors: public(DynArray[address, 10])  # L2 distributors
 reward_receivers: public(DynArray[address, 10])  # L2 reward receivers
 single_reward_receiver: public(address)
 single_reward_token: public(address)
+single_reward_token_name: public(String[64])
 
 OWNERSHIP_AGENT: public(immutable(address))
 PARAMETER_AGENT: public(immutable(address))
@@ -110,7 +109,7 @@ def __init__(_non_removable_guards: address[3], _reward_receivers: DynArray[addr
     @param _distributors Distributors addresses
     @dev _reward_receivers are not used anywhere, as the sending reward is gated by the depositor address in the gauge (this contract)
     """
-    
+
     self.reward_receivers = _reward_receivers
     self.guards = _guards
     self.distributors = _distributors
@@ -198,7 +197,7 @@ def set_single_reward_receiver(_single_reward_receiver: address):
     log SetSingleRewardReceiver(_single_reward_receiver, block.timestamp)
 
 @external
-def set_single_reward_token(_single_reward_token: address):
+def set_single_reward_token(_single_reward_token: address, _name: String[64]):
     """
     @notice Set the single reward token
     @param _single_reward_token The address of the single reward token
@@ -207,6 +206,7 @@ def set_single_reward_token(_single_reward_token: address):
     """
     assert msg.sender in self.guards, 'only guards can call this function'
     self.single_reward_token = _single_reward_token
+    self.single_reward_token_name = _name
 
     log SetSingleRewardToken(_single_reward_token, block.timestamp)
 
