@@ -61,6 +61,7 @@ The contract emits events for all significant actions:
 
 ## Version 0.0.4
 
+* recover token (on normal operation, this contract never holds any tokens, so this function is only used in case of emergency)
 * add name to for single_reward_token
 
 ## Version 0.0.3

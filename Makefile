@@ -21,12 +21,12 @@ deploy_arbitrum_sepolia:
 	ape run scripts/deploy_manager.py deploy --network arbitrum:sepolia:node
 
 deploy_many_arbitrum:
-	ape run scripts/deploy_manager.py deploy-many --network arbitrum:mainnet:node 
-	
+	ape run scripts/deploy_manager.py deploy-many --network arbitrum:mainnet:node
+
 deploy_many_arbitrum_dry_run:
 	ape run scripts/deploy_manager.py deploy-many --network arbitrum:mainnet:node --dry-run
 
-	
+
 deploy_many_arbitrum_sepolia_dry_run:
 	ape run scripts/deploy_manager.py deploy-many --network arbitrum:sepolia:node --dry-run
 
@@ -38,6 +38,9 @@ deploy_taiko:
 
 deploy_many_sonic:
 	ape run scripts/deploy_manager.py deploy-many --network sonic:mainnet:node
+
+deploy_many_sonic_dry_run:
+	ape run scripts/deploy_manager.py deploy-many --network sonic:mainnet:node --dry-run
 
 deploy_optimism:
 	ape run scripts/deploy_manager.py deploy --network optimism:mainnet:node
@@ -52,7 +55,13 @@ deploy_testnet:
 	ape run scripts/deploy_manager.py deploy-many --network ethereum:local:test
 
 filter_log:
-	ag --nonumbers "(Name|Link|Contract)" deploy_passthrough_contracts_sonic.log
+	ag --nonumbers "(Name|Link|Passthrough )" deployments/deploy_passthrough_contracts_sonic.log > deployments/deploy_passthrough_contracts_sonic_passthrough_only.log
+
+install:
+	uv sync
+
+pre_commit:
+	pre-commit run --all-files
 
 import_pvk:
 	ape accounts import arbideploy
