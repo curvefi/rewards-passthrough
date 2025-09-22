@@ -12,3 +12,4 @@ reports/
 notes.txt
 deploy_log.md
 ape-config.yaml
+uv.lock

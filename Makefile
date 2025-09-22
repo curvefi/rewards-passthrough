@@ -11,7 +11,7 @@ deploy_info:
 get_constructor_abi:
 	python  scripts/get_constructor_abi.py
 
-deploy_arbitrum_sepolia:
+deploy_arbitrum_sepolia_infura:
 	ape run scripts/deploy_manager.py deploy --network arbitrum:sepolia:infura
 
 deploy_arbitrum:
@@ -30,26 +30,12 @@ deploy_many_arbitrum_dry_run:
 deploy_many_arbitrum_sepolia_dry_run:
 	ape run scripts/deploy_manager.py deploy-many --network arbitrum:sepolia:node --dry-run
 
-deploy_info_taiko:
-	ape run scripts/deploy_manager.py info --network taiko:mainnet:node
+deploy_info_arbitrum:
+	ape run scripts/deploy_manager.py info --network arbitrum:mainnet:node
 
 deploy_taiko:
 	ape run scripts/deploy_manager.py deploy --network taiko:mainnet:node
 
-deploy_many_sonic:
-	ape run scripts/deploy_manager.py deploy-many --network sonic:mainnet:node
-
-deploy_many_sonic_dry_run:
-	ape run scripts/deploy_manager.py deploy-many --network sonic:mainnet:node --dry-run
-
-deploy_optimism:
-	ape run scripts/deploy_manager.py deploy --network optimism:mainnet:node
-
-deploy_many_optimism:
-	ape run scripts/deploy_manager.py deploy-many --network optimism:mainnet:node
-
-deploy_info_optimism:
-	ape run scripts/deploy_manager.py info --network optimism:mainnet:node
 
 deploy_testnet:
 	ape run scripts/deploy_manager.py deploy-many --network ethereum:local:test
